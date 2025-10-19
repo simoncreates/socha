@@ -323,7 +323,7 @@ impl SochaCom {
         Ok(())
     }
 
-    /// authenticate as admin sends
+    /// authenticate as admin
     pub fn send_admin_authenticate(&mut self, password: &str) -> Result<(), SendErr> {
         let xml = crate::outgoing::make_authenticate_xml(password)
             .map_err(|_| SendErr::FailedToBuildXml)?;
