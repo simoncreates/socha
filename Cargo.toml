@@ -1,0 +1,13 @@
+[package]
+name = "socha"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+anyhow = "1.0"
+yaserde = "0.12"
+yaserde_derive = "0.12"
+strong-xml = "0.6.3"
+simple-logging = "2.0.2"
+log = "0.4.28"
