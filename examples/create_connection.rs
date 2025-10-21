@@ -5,11 +5,11 @@ use std::time::Duration;
 use log::LevelFilter;
 use simple_logging::log_to_file;
 use socha::internal::{ComMessage, RoomMessage};
-use socha::socha_com::{ReceiveErr, SochaCom};
+use socha::socha_com::{ComHandler, ReceiveErr};
 
 fn main() -> io::Result<()> {
     log_to_file("com.log", LevelFilter::Info).unwrap();
-    let mut com = match SochaCom::join("localhost:13050", None) {
+    let mut com = match ComHandler::join("localhost:13050", None) {
         Ok(c) => c,
         Err(e) => {
             eprintln!("connect/join failed: {:?}", e);

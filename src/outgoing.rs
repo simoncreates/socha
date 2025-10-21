@@ -1,7 +1,9 @@
+#![allow(clippy::needless_late_init, unused_must_use)]
+// allowing needless_late_init due to warnings coming from macros inside the StrongXml crate
 use std::error::Error;
 use strong_xml::{XmlRead, XmlWrite};
 
-use crate::neutral::Direction;
+use crate::{neutral::Direction, socha_com::PrepareSlot};
 
 #[derive(Debug, XmlWrite, XmlRead)]
 #[xml(tag = "join")]
@@ -203,14 +205,22 @@ pub fn make_cancel_xml(room_id: &str) -> Result<String, Box<dyn Error>> {
 pub fn make_prepare_xml(
     game_type: &str,
     pause: bool,
-    slots: &[(&str, bool, bool)],
+    slots: &[PrepareSlot],
 ) -> Result<String, Box<dyn Error>> {
     let slots_vec = slots
         .iter()
-        .map(|(dn, ct, res)| Slot {
-            display_name: dn.to_string(),
-            can_timeout: if *ct { "true".into() } else { "false".into() },
-            reserved: if *res { "true".into() } else { "false".into() },
+        .map(|prep_slot| Slot {
+            display_name: prep_slot.displayname.to_string(),
+            can_timeout: if prep_slot.can_timeout {
+                "true".into()
+            } else {
+                "false".into()
+            },
+            reserved: if prep_slot.reserved {
+                "true".into()
+            } else {
+                "false".into()
+            },
         })
         .collect();
     let p = Prepare {

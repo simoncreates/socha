@@ -81,7 +81,7 @@ impl TryFrom<(u8, u8, u8, u8)> for Direction {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Move {
     // 0,0 is bottom left
     pub from: (u8, u8),

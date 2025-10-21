@@ -1,3 +1,5 @@
+#![allow(clippy::needless_late_init, unused_must_use)]
+// allowing needless_late_init due to warnings coming from macros inside the StrongXml crate
 use strong_xml::{XmlRead, XmlWrite};
 
 #[derive(Debug, XmlRead, XmlWrite, Clone)]

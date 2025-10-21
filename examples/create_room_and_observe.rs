@@ -4,13 +4,13 @@ use std::time::Duration;
 use log::LevelFilter;
 use simple_logging::log_to_file;
 use socha::internal::{ComMessage, RoomMessage};
-use socha::socha_com::{ReceiveErr, SochaCom};
+use socha::socha_com::{ComHandler, PrepareSlot, ReceiveErr};
 
 // todo: finish
 fn main() -> io::Result<()> {
     log_to_file("admin_com.log", LevelFilter::Info).unwrap();
 
-    let mut com = match SochaCom::connect_to_server("localhost:13050") {
+    let mut com = match ComHandler::connect_to_server("localhost:13050") {
         Ok(c) => c,
         Err(e) => {
             eprintln!("connect failed: {:?}", e);
@@ -25,7 +25,11 @@ fn main() -> io::Result<()> {
     }
     eprintln!("sent admin authenticate");
 
-    let slots = [("player1", true, true), ("player2", true, true)];
+    // todo: slots system not fully tested yet
+    let slots = [
+        PrepareSlot::new("Player_1".to_string(), true, true),
+        PrepareSlot::new("Player_2".to_string(), true, true),
+    ];
     if let Err(e) = com.send_admin_prepare(true, &slots) {
         eprintln!("prepare failed: {:?}", e);
         return Err(std::io::Error::other("prepare failed"));

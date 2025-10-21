@@ -1,3 +1,5 @@
+#[cfg(feature = "unfinished")]
+use crate::i_client_handler::IClientHandler;
 use crate::incoming::{ReceivedComMessage, ReceivedRoom};
 use crate::internal::{AdminMessage, ComMessage, Joined, Left, PreparedRoom, RoomMessage};
 use crate::neutral::Direction;
@@ -52,8 +54,27 @@ impl From<io::Error> for SendErr {
     }
 }
 
+/// communication error
+#[derive(Debug)]
+pub enum ComError {
+    SendErr(SendErr),
+    ReceiveErr(ReceiveErr),
+}
+
+impl From<SendErr> for ComError {
+    fn from(value: SendErr) -> Self {
+        ComError::SendErr(value)
+    }
+}
+
+impl From<ReceiveErr> for ComError {
+    fn from(value: ReceiveErr) -> Self {
+        ComError::ReceiveErr(value)
+    }
+}
+
 /// Connection helper for the Software-Challenge XML protocol
-pub struct SochaCom {
+pub struct ComHandler {
     reader: BufReader<TcpStream>,
     buf: String,
     stream: TcpStream,
@@ -62,7 +83,18 @@ pub struct SochaCom {
     protocol_tag_found: bool,
 }
 
-impl SochaCom {
+impl ComHandler {
+    #[cfg(feature = "unfinished")]
+    pub fn start<H: IClientHandler>(
+        addr: &str,
+        opt_reservation_code: Option<&str>,
+        handler: &mut H,
+    ) -> Result<(), ComError> {
+        let mut com = ComHandler::join(addr, opt_reservation_code)?;
+        com.run_receive_loop(handler)?;
+        Ok(())
+    }
+
     /// BLOCKING: connect to `addr` and join a free room.
     pub fn join(addr: &str, opt_reservation_code: Option<&str>) -> Result<Self, ReceiveErr> {
         println!("connecting to {}", addr);
@@ -79,7 +111,7 @@ impl SochaCom {
         stream.flush()?;
 
         let reader: BufReader<TcpStream> = BufReader::new(stream.try_clone()?);
-        let mut com = SochaCom {
+        let mut com = ComHandler {
             reader,
             buf: String::new(),
             stream,
@@ -105,7 +137,7 @@ impl SochaCom {
 
         let reader: BufReader<TcpStream> = BufReader::new(stream.try_clone()?);
 
-        Ok(SochaCom {
+        Ok(ComHandler {
             reader,
             buf: String::new(),
             stream,
@@ -113,6 +145,41 @@ impl SochaCom {
             msgs: Vec::new(),
             protocol_tag_found: false,
         })
+    }
+    #[cfg(feature = "unfinished")]
+    fn run_receive_loop<H: IClientHandler>(&mut self, handler: &mut H) -> Result<(), ComError> {
+        loop {
+            let opt_msg = self.try_for_com_message()?;
+            if let Some(msg) = opt_msg {
+                match msg {
+                    ComMessage::Joined(joined) => {
+                        handler.on_game_joined(&joined.room_id);
+                    }
+                    ComMessage::Left(_left) => {
+                        handler.on_game_left();
+                    }
+                    ComMessage::Admin(admin_msg) => {
+                        let AdminMessage::Prepared(prep_room) = admin_msg;
+                        handler.on_game_prepared(&prep_room);
+                    }
+                    ComMessage::Room(boxed_room_msg) => match *boxed_room_msg {
+                        RoomMessage::Memento(state) => {
+                            handler.on_gamestate_update(*state);
+                        }
+                        RoomMessage::MoveRequest => {
+                            let cal_move = handler.calculate_move();
+                            self.send_move(cal_move.from.0, cal_move.from.1, cal_move.dir)?;
+                        }
+                        RoomMessage::Result(res) => {
+                            handler.on_game_result(&res);
+                        }
+                        RoomMessage::WelcomeMessage => {
+                            handler.on_welcome_message();
+                        }
+                    },
+                }
+            }
+        }
     }
 
     /// BLOCKING: wait until a `ComMessage` is available and return it.
@@ -164,19 +231,6 @@ impl SochaCom {
         Ok(None)
     }
 
-    /// Send a move. Returns `NoRoomId` if not joined yet.
-    pub fn send_move(&mut self, x: u32, y: u32, dir: Direction) -> Result<(), SendErr> {
-        if let Some(room) = &self.room_id {
-            let xml = make_move_xml(room, x, y, dir).map_err(|_| SendErr::FailedToBuildXml)?;
-
-            self.stream.write_all(xml.as_bytes())?;
-            self.stream.flush()?;
-            Ok(())
-        } else {
-            Err(SendErr::NoRoomId)
-        }
-    }
-
     /// BLOCKING: wait until `str` appears in the buffer, then remove it
     fn wait_for_and_rm_str(&mut self, str: &str) -> Result<(), ReceiveErr> {
         loop {
@@ -202,12 +256,10 @@ impl SochaCom {
     fn get_com_msg_and_rm(&mut self) -> Option<ReceivedComMessage> {
         // removing the protocol tag to avoid parsing issues
         self.check_for_protocol_tag();
+
         let prepared_buf = format!("<comMessage>{}</comMessage>", self.buf);
         let rs_msg = ReceivedComMessage::from_str(&prepared_buf);
-        info!(
-            "attempting to parse comMessage from buffer: \n {}",
-            prepared_buf
-        );
+
         let msg = match rs_msg {
             Ok(m) => m,
             Err(e) => {
@@ -247,7 +299,6 @@ impl SochaCom {
                 let chunk = String::from_utf8_lossy(&tmp[..n]);
                 self.buf.push_str(&chunk);
 
-                info!("current_buffer: \n{}", self.buf);
                 Ok(())
             }
             Err(e) if e.kind() == io::ErrorKind::WouldBlock => Ok(()),
@@ -316,45 +367,60 @@ impl SochaCom {
         Ok(messages)
     }
 
-    //___ admin ___
-    fn send_admin_raw(&mut self, xml: &str) -> Result<(), SendErr> {
+    /// Send a move. Returns `NoRoomId` if not joined yet.
+    pub fn send_move(&mut self, x: u8, y: u8, dir: Direction) -> Result<(), SendErr> {
+        if let Some(room) = &self.room_id {
+            let xml = make_move_xml(room, x.into(), y.into(), dir)
+                .map_err(|_| SendErr::FailedToBuildXml)?;
+
+            self.stream.write_all(xml.as_bytes())?;
+            self.stream.flush()?;
+            Ok(())
+        } else {
+            Err(SendErr::NoRoomId)
+        }
+    }
+
+    fn send_raw(&mut self, xml: &str) -> Result<(), SendErr> {
         self.stream.write_all(xml.as_bytes())?;
         self.stream.flush()?;
         Ok(())
     }
 
+    //___ admin ___
+
     /// authenticate as admin
     pub fn send_admin_authenticate(&mut self, password: &str) -> Result<(), SendErr> {
         let xml = crate::outgoing::make_authenticate_xml(password)
             .map_err(|_| SendErr::FailedToBuildXml)?;
-        self.send_admin_raw(&xml)
+        self.send_raw(&xml)
     }
 
     /// observe a room
     pub fn send_admin_observe(&mut self, room_id: &str) -> Result<(), SendErr> {
         let xml =
             crate::outgoing::make_observe_xml(room_id).map_err(|_| SendErr::FailedToBuildXml)?;
-        self.send_admin_raw(&xml)
+        self.send_raw(&xml)
     }
 
     /// pause / resume a room
     pub fn send_admin_pause(&mut self, room_id: &str, pause: bool) -> Result<(), SendErr> {
         let xml = crate::outgoing::make_pause_xml(room_id, pause)
             .map_err(|_| SendErr::FailedToBuildXml)?;
-        self.send_admin_raw(&xml)
+        self.send_raw(&xml)
     }
 
     /// step a paused room once
     pub fn send_admin_step(&mut self, room_id: &str) -> Result<(), SendErr> {
         let xml = crate::outgoing::make_step_xml(room_id).map_err(|_| SendErr::FailedToBuildXml)?;
-        self.send_admin_raw(&xml)
+        self.send_raw(&xml)
     }
 
     /// cancel a room
     pub fn send_admin_cancel(&mut self, room_id: &str) -> Result<(), SendErr> {
         let xml =
             crate::outgoing::make_cancel_xml(room_id).map_err(|_| SendErr::FailedToBuildXml)?;
-        self.send_admin_raw(&xml)
+        self.send_raw(&xml)
     }
 
     /// prepare a new room
@@ -362,10 +428,27 @@ impl SochaCom {
     pub fn send_admin_prepare(
         &mut self,
         pause: bool,
-        slots: &[(&str, bool, bool)],
+        slots: &[PrepareSlot],
     ) -> Result<(), SendErr> {
         let xml = crate::outgoing::make_prepare_xml("swc_2026_piranhas", pause, slots)
             .map_err(|_| SendErr::FailedToBuildXml)?;
-        self.send_admin_raw(&xml)
+        self.send_raw(&xml)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct PrepareSlot {
+    pub displayname: String,
+    pub can_timeout: bool,
+    pub reserved: bool,
+}
+
+impl PrepareSlot {
+    pub fn new(displayname: String, can_timeout: bool, reserved: bool) -> Self {
+        PrepareSlot {
+            displayname,
+            can_timeout,
+            reserved,
+        }
     }
 }
