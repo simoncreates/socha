@@ -4,24 +4,6 @@
 Dieses Repository stellt eine Rust-Bibliothek zur Verfügung, die als Vermittlungsschicht (Client <-> Server) für Teilnehmer:innen der **Software Challenge Germany** dienen soll. Es enthält Quellcode und Beispiel-Clients im Ordner `examples`.
 
 
----
-
-## Inhaltsverzeichnis
-
-- [Voraussetzungen](#voraussetzungen)  
-- [Installation](#installation)  
-  - [Als Dependency (für dein Projekt)](#als-dependency-für-dein-projekt)  
-  - [Repository lokal bauen](#repository-lokal-bauen)  
-- [Erste Schritte / Schnellstart](#erste-schritte--schnellstart)  
-- [Beispiele starten](#beispiele-starten)  
-- [Konfiguration & Startargumente](#konfiguration--startargumente)  
-- [Entwicklung & Tests](#entwicklung--tests)  
-- [Stand der Entwicklung / trait-basierte API](#stand-der-entwicklung--trait-basierte-api)  
-- [Mitwirken / Contribution](#mitwirken--contribution)  
-- [Lizenz](#lizenz)
-
----
-
 ## Voraussetzungen
 
 - Rust toolchain `version: 1.82` — prüfbar mit `rustc --version` und `cargo --version`.  
