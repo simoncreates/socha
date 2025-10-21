@@ -7,19 +7,6 @@ Dieses Repository stellt eine Rust-Bibliothek zur Verfügung, die als Vermittlun
 ## Voraussetzungen
 
 - Rust toolchain `version: 1.82` — prüfbar mit `rustc --version` und `cargo --version`.  
----
-
-## Installation
-
-### Als Dependency
-
-Füge in deiner `Cargo.toml` z. B. folgendes hinzu:
-
-```toml
-[dependencies]
-socha = { git = "https://github.com/simoncreates/socha.git" }
-```
----
 
 
 ## Stand der Entwicklung — trait-basierte API
