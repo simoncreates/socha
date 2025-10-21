@@ -18,5 +18,5 @@ Aktuell ist die Bibliothek als reines Kommunikations-Layer implementiert. Eine *
 Beiträge sind willkommen:
 
 1. Issue anlegen (Bug, Feature Request, Frage)  
-2. Fork → Branch → PR 
+2. Fork -> Branch -> PR 
 3. Falls du an der trait-Umstellung mitarbeiten willst, mache ein Fork vom in_dev branch
