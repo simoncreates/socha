@@ -2,6 +2,10 @@
 name = "socha"
 version = "0.1.0"
 edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Communication layer for the software challenge germany 2025"
+readme = "README.md"
+repository = "https://github.com/simoncreates/socha"
 
 [dependencies]
 strong-xml = "0.6.3"
