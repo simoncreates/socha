@@ -6,10 +6,10 @@ Dieses Repository stellt eine Rust-Bibliothek zur Verfügung, die als Vermittlun
 
 ## Voraussetzungen
 
-- Rust toolchain `version: 1.82` — prüfbar mit `rustc --version` und `cargo --version`.  
+- Rust toolchain `version: 1.82` - prüfbar mit `rustc --version` und `cargo --version`.  
 
 
-## Stand der Entwicklung — trait-basierte API
+## Stand der Entwicklung - trait-basierte API
 Aktuell ist die Bibliothek als reines Kommunikations-Layer implementiert. Eine **trait-basierte API**  ist in Arbeit.
 
 
