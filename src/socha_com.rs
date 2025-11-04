@@ -152,9 +152,7 @@ impl ComHandler {
 
     /// NONBLOCKING: try to read and return a `ComMessage` if available.
     pub fn try_for_com_message(&mut self) -> Result<Option<ComMessage>, ReceiveErr> {
-        self.try_read_new()?;
-        let mut msgs = self.attempt_get_com_messages()?;
-        self.msgs.append(&mut msgs);
+        self.try_receive_com_message()?;
         if !self.msgs.is_empty() {
             if cfg!(debug_assertions) {
                 info!("retrieving saved messages: {}", self.msgs.len());
@@ -167,6 +165,22 @@ impl ComHandler {
             ));
         }
         Ok(None)
+    }
+
+    /// NONBLOCKING: tries to receive a new com message and stores it into the message buffer
+    fn try_receive_com_message(&mut self) -> Result<(), ReceiveErr> {
+        self.try_read_new()?;
+        let mut msgs = self.attempt_get_com_messages()?;
+        self.msgs.append(&mut msgs);
+        Ok(())
+    }
+
+    /// returns true, if a move request has been stored into the message buffer
+    /// does not remove the move request from the buffer
+    pub fn peak_move_request(&mut self) -> bool {
+        let _ = self.try_receive_com_message();
+        self.msgs
+            .contains(&ComMessage::Room(Box::new(RoomMessage::MoveRequest)))
     }
 
     /// BLOCKING: wait until `str` appears in the buffer, then remove it
