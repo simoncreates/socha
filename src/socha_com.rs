@@ -1,6 +1,5 @@
 use crate::error::{ComMessageBuildErr, ConnectionClosedErr, ReceiveErr, SendErr};
-#[cfg(feature = "unfinished")]
-use crate::i_client_handler::IClientHandler;
+
 use crate::incoming::{ReceivedComMessage, ReceivedRoom};
 use crate::internal::{AdminMessage, ComMessage, Joined, Left, PreparedRoom, RoomMessage};
 use crate::neutral::Direction;
@@ -9,6 +8,7 @@ use log::info;
 use std::io::{self, BufReader, Read, Write};
 use std::net::TcpStream;
 use std::time::Duration;
+
 use strong_xml::XmlRead;
 
 /// Connection helper for the Software-Challenge XML protocol
@@ -22,17 +22,6 @@ pub struct ComHandler {
 }
 
 impl ComHandler {
-    #[cfg(feature = "unfinished")]
-    pub fn start<H: IClientHandler>(
-        addr: &str,
-        opt_reservation_code: Option<&str>,
-        handler: &mut H,
-    ) -> Result<(), ComError> {
-        let mut com = ComHandler::join(addr, opt_reservation_code)?;
-        com.run_receive_loop(handler)?;
-        Ok(())
-    }
-
     /// BLOCKING: connect to `addr` and join a free room.
     pub fn join(addr: &str, opt_reservation_code: Option<&str>) -> Result<Self, ReceiveErr> {
         println!("connecting to {}", addr);
@@ -83,41 +72,6 @@ impl ComHandler {
             msgs: Vec::new(),
             protocol_tag_found: false,
         })
-    }
-    #[cfg(feature = "unfinished")]
-    fn run_receive_loop<H: IClientHandler>(&mut self, handler: &mut H) -> Result<(), ComError> {
-        loop {
-            let opt_msg = self.try_for_com_message()?;
-            if let Some(msg) = opt_msg {
-                match msg {
-                    ComMessage::Joined(joined) => {
-                        handler.on_game_joined(&joined.room_id);
-                    }
-                    ComMessage::Left(_left) => {
-                        handler.on_game_left();
-                    }
-                    ComMessage::Admin(admin_msg) => {
-                        let AdminMessage::Prepared(prep_room) = admin_msg;
-                        handler.on_game_prepared(&prep_room);
-                    }
-                    ComMessage::Room(boxed_room_msg) => match *boxed_room_msg {
-                        RoomMessage::Memento(state) => {
-                            handler.on_gamestate_update(*state);
-                        }
-                        RoomMessage::MoveRequest => {
-                            let cal_move = handler.calculate_move();
-                            self.send_move(cal_move.from.0, cal_move.from.1, cal_move.dir)?;
-                        }
-                        RoomMessage::Result(res) => {
-                            handler.on_game_result(&res);
-                        }
-                        RoomMessage::WelcomeMessage => {
-                            handler.on_welcome_message();
-                        }
-                    },
-                }
-            }
-        }
     }
 
     /// BLOCKING: wait until a `ComMessage` is available and return it.
@@ -333,9 +287,8 @@ impl ComHandler {
         }
     }
 
-    fn send_raw(&mut self, xml: &str) -> Result<(), SendErr> {
+    pub fn send_raw(&mut self, xml: &str) -> Result<(), SendErr> {
         self.stream.write_all(xml.as_bytes())?;
-        self.stream.flush()?;
         Ok(())
     }
 

@@ -26,7 +26,6 @@ fn main() -> io::Result<()> {
                 }
                 ComMessage::Left(left) => {
                     eprintln!("left room {}", left.room_id);
-                    // if you want to keep your client running, in this example, i will stop the bot to avoid idling
                     exit(0)
                 }
                 ComMessage::Room(room_msg) => match *room_msg {
