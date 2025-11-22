@@ -4,8 +4,9 @@ use std::time::Duration;
 
 use log::LevelFilter;
 use simple_logging::log_to_file;
+use socha::error::ReceiveErr;
 use socha::internal::{ComMessage, RoomMessage};
-use socha::socha_com::{ComHandler, ReceiveErr};
+use socha::socha_com::ComHandler;
 
 fn main() -> io::Result<()> {
     log_to_file("com.log", LevelFilter::Info).unwrap();

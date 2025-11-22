@@ -1,3 +1,4 @@
+use crate::error::{ComMessageBuildErr, ConnectionClosedErr, ReceiveErr, SendErr};
 #[cfg(feature = "unfinished")]
 use crate::i_client_handler::IClientHandler;
 use crate::incoming::{ReceivedComMessage, ReceivedRoom};
@@ -9,69 +10,6 @@ use std::io::{self, BufReader, Read, Write};
 use std::net::TcpStream;
 use std::time::Duration;
 use strong_xml::XmlRead;
-
-#[derive(Debug)]
-pub enum ComMessageBuildErr {
-    FailedBuildingMemento(String),
-}
-
-#[derive(Debug)]
-pub enum ConnectionClosedErr {
-    ServerClosed,
-    ProtocolEnded,
-    NoMessageReceivedFor(std::time::Duration),
-}
-
-#[derive(Debug)]
-pub enum ReceiveErr {
-    Io(io::Error),
-    XmlError(strong_xml::XmlError),
-    ConnectionClosed(ConnectionClosedErr),
-    FailedToBuildRoomMessage(String),
-    FailedToBuildAdminMessage(String),
-}
-
-impl From<io::Error> for ReceiveErr {
-    fn from(err: io::Error) -> Self {
-        ReceiveErr::Io(err)
-    }
-}
-impl From<strong_xml::XmlError> for ReceiveErr {
-    fn from(xml_err: strong_xml::XmlError) -> Self {
-        Self::XmlError(xml_err)
-    }
-}
-
-#[derive(Debug)]
-pub enum SendErr {
-    NoRoomId,
-    FailedToBuildXml,
-    Io(io::Error),
-}
-impl From<io::Error> for SendErr {
-    fn from(err: io::Error) -> Self {
-        SendErr::Io(err)
-    }
-}
-
-/// communication error
-#[derive(Debug)]
-pub enum ComError {
-    SendErr(SendErr),
-    ReceiveErr(ReceiveErr),
-}
-
-impl From<SendErr> for ComError {
-    fn from(value: SendErr) -> Self {
-        ComError::SendErr(value)
-    }
-}
-
-impl From<ReceiveErr> for ComError {
-    fn from(value: ReceiveErr) -> Self {
-        ComError::ReceiveErr(value)
-    }
-}
 
 /// Connection helper for the Software-Challenge XML protocol
 pub struct ComHandler {
@@ -214,9 +152,7 @@ impl ComHandler {
 
     /// NONBLOCKING: try to read and return a `ComMessage` if available.
     pub fn try_for_com_message(&mut self) -> Result<Option<ComMessage>, ReceiveErr> {
-        self.try_read_new()?;
-        let mut msgs = self.attempt_get_com_messages()?;
-        self.msgs.append(&mut msgs);
+        self.try_receive_com_message()?;
         if !self.msgs.is_empty() {
             if cfg!(debug_assertions) {
                 info!("retrieving saved messages: {}", self.msgs.len());
@@ -229,6 +165,22 @@ impl ComHandler {
             ));
         }
         Ok(None)
+    }
+
+    /// NONBLOCKING: tries to receive a new com message and stores it into the message buffer
+    fn try_receive_com_message(&mut self) -> Result<(), ReceiveErr> {
+        self.try_read_new()?;
+        let mut msgs = self.attempt_get_com_messages()?;
+        self.msgs.append(&mut msgs);
+        Ok(())
+    }
+
+    /// returns true, if a move request has been stored into the message buffer
+    /// does not remove the move request from the buffer
+    pub fn peak_move_request(&mut self) -> bool {
+        let _ = self.try_receive_com_message();
+        self.msgs
+            .contains(&ComMessage::Room(Box::new(RoomMessage::MoveRequest)))
     }
 
     /// BLOCKING: wait until `str` appears in the buffer, then remove it

@@ -3,8 +3,9 @@ use std::time::Duration;
 
 use log::LevelFilter;
 use simple_logging::log_to_file;
+use socha::error::ReceiveErr;
 use socha::internal::{ComMessage, RoomMessage};
-use socha::socha_com::{ComHandler, PrepareSlot, ReceiveErr};
+use socha::socha_com::{ComHandler, PrepareSlot};
 
 // todo: finish
 fn main() -> io::Result<()> {

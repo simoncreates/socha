@@ -5,7 +5,7 @@ use std::{
 
 use crate::incoming::ReceivedLastMove;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Direction {
     UP,
     UpRight,
@@ -81,7 +81,7 @@ impl TryFrom<(u8, u8, u8, u8)> for Direction {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Move {
     // 0,0 is bottom left
     pub from: (u8, u8),

@@ -69,7 +69,7 @@ dependencies = [
 
 [[package]]
 name = "socha"
-version = "0.1.0"
+version = "0.1.3"
 dependencies = [
  "log",
  "simple-logging",

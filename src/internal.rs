@@ -5,12 +5,12 @@ use crate::{
     neutral::{Move, PiranhaField, Team},
 };
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Joined {
     pub room_id: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 /// opposite of joined
 pub struct Left {
     pub room_id: String,
@@ -22,7 +22,7 @@ pub struct Row {
     pub fields: [PiranhaField; 10],
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Board {
     /// from bottom to top
     pub rows: [Row; 10],
@@ -70,7 +70,7 @@ impl TryFrom<ReceivedBoard> for Board {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct GameState {
     // todo handler class
     pub class: Option<String>,
@@ -125,19 +125,19 @@ impl TryFrom<ReceivedState> for GameState {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ScoreTypes {
     Siegpunkte,
     Schwarmgröße,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AggregationTypes {
     Sum,
     Average,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Scores {
     pub score_type: ScoreTypes,
     pub value: u32,
@@ -145,14 +145,14 @@ pub struct Scores {
     pub relevant_for_ranking: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Winner {
     pub team: Team,
     pub regular: bool,
     pub reason: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GameResult {
     pub player1_result: Vec<Scores>,
     pub player2_result: Vec<Scores>,
@@ -265,19 +265,19 @@ impl TryFrom<ReceivedData> for GameResult {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum RoomMessage {
     Memento(Box<GameState>),
     Result(Box<GameResult>),
     WelcomeMessage,
     MoveRequest,
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct PreparedRoom {
     pub reservations: (String, String),
     pub room_id: String,
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum AdminMessage {
     /// (reservation, reservation)
     Prepared(PreparedRoom),
@@ -320,7 +320,7 @@ impl TryFrom<ReceivedRoom> for RoomMessage {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ComMessage {
     Joined(Joined),
     Left(Left),

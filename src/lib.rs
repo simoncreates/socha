@@ -1,3 +1,4 @@
+pub mod error;
 pub mod i_client_handler;
 pub mod incoming;
 pub mod internal;
