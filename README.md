@@ -17,6 +17,9 @@ Aktuell ist die Bibliothek als reines Kommunikations-Layer implementiert. Eine *
 
 Beiträge sind willkommen:
 
-1. Issue anlegen, oder ``simoncreatesart`` auf discord anschreiben (Bug, Feature Request, Frage)  
+1. ``simoncreatesart`` auf discord anschreiben (Bug, Feature Request, Frage)  
 2. Fork -> Branch -> PR 
-3. Falls du an der trait-Umstellung mitarbeiten willst, mache ein Fork vom in_dev branch
+
+## TODOS:
+
+1. make und unmake move, sowie possible_moves für ```socha::internal::GameState``` implementieren 
