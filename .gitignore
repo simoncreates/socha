@@ -3,3 +3,4 @@ server
 software-challenge-server
 admin_com.log
 com.log
+*.log

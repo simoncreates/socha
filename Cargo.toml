@@ -14,9 +14,6 @@ log = "0.4.28"
 crossbeam-channel = "0.5.15"
 
 [features]
-default = ["unfinished"]
-unfinished = [] 
 
 [[example]]
 name = "i_client_handler_example"
-required-features = ["unfinished"]

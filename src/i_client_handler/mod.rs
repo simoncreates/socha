@@ -1,4 +1,3 @@
-#[cfg(feature = "unfinished")]
 use std::time::Duration;
 use std::{
     sync::{
@@ -11,8 +10,6 @@ use std::{
 
 use log::info;
 pub mod handler_trait;
-
-#[cfg(feature = "unfinished")]
 use crate::{error::ReceiveErr, i_client_handler::handler_trait::IClientHandler};
 use crate::{
     internal::{ComMessage, RoomMessage},
@@ -51,7 +48,6 @@ pub enum SendAdminCommand {
     },
 }
 
-#[cfg(feature = "unfinished")]
 pub fn start_iclient<I>(
     addr: &str,
     opt_reservation_code: Option<&str>,
@@ -66,19 +62,14 @@ where
 
     let mut com = ComHandler::join(addr, opt_reservation_code)?;
     let (msg_tx, msg_rx) = unbounded::<ComMessage>();
+    let (watch_tx, watch_rx) = unbounded::<ComMessage>();
     let (out_tx, out_rx) = unbounded::<SendCommnad>();
-
-    let worker_rx = msg_rx.clone();
-
     let reader_handle = std::thread::spawn(move || loop {
         // messages from server
         match com.try_for_com_message() {
             Ok(Some(msg)) => {
-                println!("received:{:?}", msg);
-
-                if msg_tx.send(msg).is_err() {
-                    break;
-                }
+                let _ = msg_tx.send(msg.clone());
+                let _ = watch_tx.send(msg);
             }
             Ok(None) => {
                 std::thread::sleep(thread_sleep_time);
@@ -97,7 +88,7 @@ where
                     let _ = com.send_raw(&xml);
                 }
                 SendCommnad::Admin(_admin_cmd) => {
-                    // todo: implement (shouldnt be necessary)
+                    // todo: implement (shouldnt be necessary for the i_client_handler)
                 }
             }
         }
@@ -108,7 +99,7 @@ where
 
         use crate::internal::RoomMessage;
 
-        match worker_rx.try_recv() {
+        match msg_rx.try_recv() {
             Ok(com_message) => match com_message {
                 ComMessage::Joined(joined) => {
                     info!("joined room {}", joined.room_id);
@@ -117,7 +108,6 @@ where
                 ComMessage::Left(left) => {
                     info!("left room {}", left.room_id);
                     i_client_handler.on_game_left();
-                    break;
                 }
                 ComMessage::Room(room_msg) => match *room_msg {
                     RoomMessage::Memento(state) => {
@@ -131,13 +121,15 @@ where
                     }
                     RoomMessage::MoveRequest => {
                         info!("got move request");
+
+                        let mv = i_client_handler.calculate_move();
+                        out_tx.send(SendCommnad::Move(mv)).unwrap();
                         let cancel_handler = ComCancelHandler::new_from_receiver(
-                            worker_rx.clone(),
+                            watch_rx.clone(),
                             timeout,
                             thread_sleep_time,
                         );
-                        let mv = i_client_handler.calculate_move(cancel_handler);
-                        out_tx.send(SendCommnad::Move(mv)).unwrap();
+                        i_client_handler.while_waiting(cancel_handler);
                     }
                     RoomMessage::Result(result) => {
                         info!("got result: \n{:#?}", result);

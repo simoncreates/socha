@@ -5,24 +5,24 @@ use crate::{
     neutral::{Move, PiranhaField, Team},
 };
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Joined {
     pub room_id: String,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 /// opposite of joined
 pub struct Left {
     pub room_id: String,
 }
 
-#[derive(Debug, Default, PartialEq, Eq)]
+#[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct Row {
     /// from left to right
     pub fields: [PiranhaField; 10],
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Board {
     /// from bottom to top
     pub rows: [Row; 10],
@@ -70,7 +70,7 @@ impl TryFrom<ReceivedBoard> for Board {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct GameState {
     // todo handler class
     pub class: Option<String>,
@@ -265,19 +265,19 @@ impl TryFrom<ReceivedData> for GameResult {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum RoomMessage {
     Memento(Box<GameState>),
     Result(Box<GameResult>),
     WelcomeMessage,
     MoveRequest,
 }
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct PreparedRoom {
     pub reservations: (String, String),
     pub room_id: String,
 }
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum AdminMessage {
     /// (reservation, reservation)
     Prepared(PreparedRoom),
@@ -320,7 +320,7 @@ impl TryFrom<ReceivedRoom> for RoomMessage {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ComMessage {
     Joined(Joined),
     Left(Left),

@@ -166,8 +166,21 @@ impl ComHandler {
         let prepared_buf = format!("<comMessage>{}</comMessage>", self.buf);
         let rs_msg = ReceivedComMessage::from_str(&prepared_buf);
 
+        if !self.buf.is_empty() && cfg!(debug_assertions) {
+            info!(
+                "attempting to get a message from prepared buf: \n{}",
+                prepared_buf
+            );
+        }
+
         let msg = match rs_msg {
-            Ok(m) => m,
+            Ok(m) => {
+                if !self.buf.is_empty() && cfg!(debug_assertions) {
+                    info!("receiving successful: \n{:?}", m);
+                }
+
+                m
+            }
             Err(e) => {
                 if cfg!(debug_assertions) {
                     info!("");
