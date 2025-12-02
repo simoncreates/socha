@@ -36,6 +36,21 @@ impl TryFrom<&str> for Direction {
     }
 }
 
+impl Direction {
+    pub fn to_delta(&self) -> (i32, i32) {
+        match self {
+            Direction::UP => (0, 1),
+            Direction::UpRight => (1, 1),
+            Direction::Right => (1, 0),
+            Direction::DownRight => (1, -1),
+            Direction::Down => (0, -1),
+            Direction::DownLeft => (-1, -1),
+            Direction::Left => (-1, 0),
+            Direction::UpLeft => (-1, 1),
+        }
+    }
+}
+
 impl Display for Direction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -83,7 +98,6 @@ impl TryFrom<(u8, u8, u8, u8)> for Direction {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Move {
-    // 0,0 is bottom left
     pub from: (u8, u8),
     pub dir: Direction,
 }
@@ -95,7 +109,7 @@ impl TryFrom<&ReceivedLastMove> for Move {
             (m.x, m.y)
         } else {
             return Err(
-                "ReceivedLastMove should contain \"from\" when converting to internal::Move"
+                "ReceivedLastMove should contain 'from' when converting to internal::Move"
                     .to_string(),
             );
         };
@@ -104,7 +118,7 @@ impl TryFrom<&ReceivedLastMove> for Move {
             Direction::try_from(d.value.as_ref())?
         } else {
             return Err(
-                "ReceivedLastMove should contain \"direction\" when converting to internal::Move"
+                "ReceivedLastMove should contain 'direction' when converting to internal::Move"
                     .to_string(),
             );
         };
@@ -112,10 +126,34 @@ impl TryFrom<&ReceivedLastMove> for Move {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+impl Move {
+    pub fn to_goal_pos(&self, dis: u8) -> (u8, u8) {
+        let (dx, dy) = self.dir.to_delta();
+
+        let mut gx = self.from.0 as i32 + dx * dis as i32;
+        let mut gy = self.from.1 as i32 + dy * dis as i32;
+
+        gx = gx.clamp(0, 9);
+        gy = gy.clamp(0, 9);
+
+        (gx as u8, gy as u8)
+    }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
 pub enum Team {
+    #[default]
     One,
     Two,
+}
+
+impl Team {
+    pub fn opponent(&self) -> Team {
+        match *self {
+            Team::One => Team::Two,
+            Team::Two => Team::One,
+        }
+    }
 }
 
 impl TryFrom<&str> for Team {
@@ -155,7 +193,7 @@ impl fmt::Display for Size {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Copy)]
 pub enum PiranhaField {
     #[default]
     Empty,

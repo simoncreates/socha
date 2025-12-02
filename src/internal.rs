@@ -2,7 +2,7 @@ use std::{fmt, str::FromStr};
 
 use crate::{
     incoming::{ReceivedBoard, ReceivedData, ReceivedRoom, ReceivedState},
-    neutral::{Move, PiranhaField, Team},
+    neutral::{Direction, Move, PiranhaField, Team},
 };
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -22,7 +22,7 @@ pub struct Row {
     pub fields: [PiranhaField; 10],
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Default)]
 pub struct Board {
     /// from bottom to top
     pub rows: [Row; 10],
@@ -70,9 +70,112 @@ impl TryFrom<ReceivedBoard> for Board {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+impl Board {
+    pub fn in_bounds(x: i32, y: i32) -> bool {
+        (0..10).contains(&x) && (0..10).contains(&y)
+    }
+
+    pub fn get(&self, x: usize, y: usize) -> &PiranhaField {
+        &self.rows[y].fields[x]
+    }
+
+    pub fn get_mut(&mut self, x: usize, y: usize) -> &mut PiranhaField {
+        &mut self.rows[y].fields[x]
+    }
+
+    pub fn count_fishes_on_axis(&self, x: usize, y: usize, dir: Direction) -> u8 {
+        let (dx, dy) = dir.to_delta();
+
+        let mut cnt: u8 = 0;
+
+        if matches!(self.get(x, y), PiranhaField::Fish { .. }) {
+            cnt += 1;
+        }
+        let mut cx = x as i32 + dx;
+        let mut cy = y as i32 + dy;
+
+        while Board::in_bounds(cx, cy) {
+            if let PiranhaField::Fish { .. } = self.get(cx as usize, cy as usize) {
+                cnt += 1;
+            }
+            cx += dx;
+            cy += dy;
+        }
+
+        let (bdx, bdy) = (-dx, -dy);
+        let mut cx = x as i32 + bdx;
+        let mut cy = y as i32 + bdy;
+
+        while Board::in_bounds(cx, cy) {
+            if let PiranhaField::Fish { .. } = self.get(cx as usize, cy as usize) {
+                cnt += 1;
+            }
+            cx += bdx;
+            cy += bdy;
+        }
+
+        cnt
+    }
+
+    pub fn check_allowed(
+        board: &Self,
+        x: usize,
+        y: usize,
+        dir: Direction,
+        dis: u8,
+        us_team: Team,
+    ) -> bool {
+        if dis == 0 {
+            return false;
+        }
+
+        let opp_team = match us_team {
+            Team::One => Team::Two,
+            Team::Two => Team::One,
+        };
+
+        let mut cx = x as i32;
+        let mut cy = y as i32;
+        let (dx, dy) = dir.to_delta();
+        let steps = dis as i32;
+
+        for _step in 1..steps {
+            cx += dx;
+            cy += dy;
+
+            if !Board::in_bounds(cx, cy) {
+                return false;
+            }
+
+            let p_field = Board::get(board, cx as usize, cy as usize);
+
+            // opp fish in the way
+            if matches!(p_field, PiranhaField::Fish { team, .. } if *team == opp_team) {
+                return false;
+            }
+        }
+
+        // check goal field
+        cx += dx;
+        cy += dy;
+
+        if !Board::in_bounds(cx, cy) {
+            return false;
+        }
+
+        let goal_field = Board::get(board, cx as usize, cy as usize);
+
+        match goal_field {
+            PiranhaField::Squid => false,
+            PiranhaField::Fish { team, .. } if *team == us_team => false,
+            PiranhaField::Empty | PiranhaField::Fish { .. } => true,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Default)]
 pub struct GameState {
-    // todo handler class
+    // todo handle class
     pub class: Option<String>,
     pub start_team: Team,
     pub turn: u32,
@@ -87,7 +190,7 @@ impl TryFrom<ReceivedState> for GameState {
             Team::try_from(start_team_str.as_ref())?
         } else {
             return Err(
-                "ReceivedState should contain a start team when converting to GameState"
+                "ReceivedState should contain a 'start team' when converting to GameState"
                     .to_string(),
             );
         };
@@ -96,7 +199,7 @@ impl TryFrom<ReceivedState> for GameState {
             t
         } else {
             return Err(
-                "ReceivedState should contain \"turn\" when converting to GameState".to_string(),
+                "ReceivedState should contain 'turn' when converting to GameState".to_string(),
             );
         };
 
@@ -122,6 +225,135 @@ impl TryFrom<ReceivedState> for GameState {
             board,
             last_move,
         })
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct MoveChange {
+    initial_square: (u8, u8),
+    final_square: (u8, u8),
+    // some if a fish was eaten
+    fish_at_final: Option<PiranhaField>,
+}
+
+impl GameState {
+    pub fn new_with_board(board: Board, start_team: Team) -> Self {
+        GameState {
+            class: None,
+            start_team,
+            turn: 0,
+            board,
+            last_move: None,
+        }
+    }
+    pub fn current_team(&self) -> Team {
+        if self.turn % 2 == 0 {
+            match self.start_team {
+                Team::One => Team::One,
+                Team::Two => Team::Two,
+            }
+        } else {
+            match self.start_team {
+                Team::One => Team::Two,
+                Team::Two => Team::One,
+            }
+        }
+    }
+
+    pub fn possible_moves(&self) -> Vec<Move> {
+        let mut moves = Vec::new();
+        let team = self.current_team();
+
+        for y in 0..10 {
+            for x in 0..10 {
+                let cell = self.board.get(x, y);
+
+                if let PiranhaField::Fish { team: t, .. } = cell {
+                    if *t != team {
+                        continue;
+                    }
+                } else {
+                    continue;
+                }
+                for dir in [
+                    Direction::Left,
+                    Direction::Right,
+                    Direction::UP,
+                    Direction::Down,
+                    Direction::UpLeft,
+                    Direction::UpRight,
+                    Direction::DownLeft,
+                    Direction::DownRight,
+                ] {
+                    let dis = self.board.count_fishes_on_axis(x, y, dir);
+                    if Board::check_allowed(&self.board, x, y, dir, dis, team) {
+                        moves.push(Move {
+                            from: (x as u8, y as u8),
+                            dir,
+                        });
+                    }
+                }
+            }
+        }
+
+        moves
+    }
+
+    /// assumes legal move
+    pub fn make_move(&mut self, mv: Move) -> MoveChange {
+        let dis = Board::count_fishes_on_axis(
+            &self.board,
+            mv.from.0 as usize,
+            mv.from.1 as usize,
+            mv.dir,
+        );
+        let goal_field = mv.to_goal_pos(dis);
+
+        let (fx, fy) = (mv.from.0 as usize, mv.from.1 as usize);
+        let (gx, gy) = (goal_field.0 as usize, goal_field.1 as usize);
+
+        let field_at_goal = *self.board.get(gx, gy);
+        let field_at_initial = *self.board.get(fx, fy);
+        let fish_at_final = if !matches!(field_at_goal, PiranhaField::Empty) {
+            Some(field_at_goal)
+        } else {
+            None
+        };
+
+        let removed = self.board.get_mut(fx, fy);
+        *removed = PiranhaField::Empty;
+
+        let goal = self.board.get_mut(gx, gy);
+        *goal = field_at_initial;
+
+        MoveChange {
+            initial_square: mv.from,
+            final_square: goal_field,
+            fish_at_final,
+        }
+    }
+
+    pub fn unmake_move(&mut self, change: MoveChange) {
+        let (fx, fy) = (
+            change.initial_square.0 as usize,
+            change.initial_square.1 as usize,
+        );
+        let (gx, gy) = (
+            change.final_square.0 as usize,
+            change.final_square.1 as usize,
+        );
+
+        let moved_fish = *self.board.get(gx, gy);
+        *self.board.get_mut(fx, fy) = moved_fish;
+
+        match change.fish_at_final {
+            Some(fish) => {
+                *self.board.get_mut(gx, gy) = fish;
+            }
+            None => {
+                *self.board.get_mut(gx, gy) = PiranhaField::Empty;
+            }
+        }
     }
 }
 

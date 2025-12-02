@@ -1,41 +1,41 @@
-use std::time::Instant;
-
 use log::LevelFilter;
 use simple_logging::log_to_file;
-use socha::error::ComError;
+use socha::{error::ComError, internal::GameState};
 
 use socha::i_client_handler::handler_trait::IClientHandler;
 use socha::i_client_handler::start_iclient;
-use socha::neutral::Move;
+
+use rand::Rng;
 
 #[derive(Debug, Default)]
-pub struct Logic {}
+pub struct Logic {
+    game_state: GameState,
+}
+
 impl IClientHandler for Logic {
     fn calculate_move(&mut self) -> socha::neutral::Move {
         println!("move-request erhalten");
-        let start = Instant::now();
-        loop {
-            if start.elapsed() > std::time::Duration::from_millis(1900) {
-                break;
-            }
-        }
-        Move {
-            dir: socha::neutral::Direction::Right,
-            from: (0, 2),
-        }
+        let mut rng = rand::rng();
+        let moves = self.game_state.possible_moves();
+
+        moves[rng.random_range(0..moves.len())]
     }
-    fn on_gamestate_update(&mut self, _state: socha::internal::GameState) {}
+
+    fn on_gamestate_update(&mut self, state: socha::internal::GameState) {
+        self.game_state = state;
+    }
+
     fn while_waiting(&mut self, cancel_handler: socha::i_client_handler::ComCancelHandler) {
         loop {
             if cancel_handler.is_cancelled() {
-                println!("warten zuende, der Gegner hat ein Zug gemacht");
                 break;
             }
         }
     }
 }
-
+/// random bot Beispiel
 fn main() -> Result<(), ComError> {
+    // logs in datei speichern
     log_to_file("com.log", LevelFilter::Info).unwrap();
     let mut handler = Logic::default();
     start_iclient(
@@ -43,7 +43,7 @@ fn main() -> Result<(), ComError> {
         None,
         &mut handler,
         std::time::Duration::from_millis(2),
-        std::time::Duration::from_secs_f64(1.0), // wird für den cancel handler der while waiting function verwendet
+        std::time::Duration::from_secs_f64(1.0), // maximale wartzeit für die while_waiting funktion
     )?;
     Ok(())
 }
