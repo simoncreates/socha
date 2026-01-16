@@ -299,6 +299,25 @@ impl GameState {
         moves
     }
 
+    pub fn get_field_type(&self, pos: (u8, u8)) -> Option<PiranhaField> {
+        match self.board.rows.get(pos.1 as usize) {
+            None => None,
+            Some(r) => r.fields.get(pos.0 as usize).copied(),
+        }
+    }
+
+    pub fn get_fields_type(&self, field_type: PiranhaField) -> Vec<(u8, u8)> {
+        let mut fields = Vec::new();
+        for (i, row) in self.board.rows.iter().enumerate() {
+            for (j, f) in row.fields.iter().enumerate() {
+                if f == &field_type {
+                    fields.push((i as u8, j as u8));
+                }
+            }
+        }
+        fields
+    }
+
     /// assumes legal move
     pub fn make_move(&mut self, mv: Move) -> MoveChange {
         let dis = Board::count_fishes_on_axis(

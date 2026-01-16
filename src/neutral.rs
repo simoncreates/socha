@@ -183,6 +183,16 @@ pub enum Size {
     L,
 }
 
+impl Size {
+    pub fn to_num(&self) -> u8 {
+        match self {
+            Size::L => 3,
+            Size::M => 2,
+            Size::S => 1,
+        }
+    }
+}
+
 impl fmt::Display for Size {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -203,6 +213,31 @@ pub enum PiranhaField {
         size: Size,
     },
 }
+
+impl PiranhaField {
+    pub fn to_size_num(&self) -> u8 {
+        match self {
+            PiranhaField::Empty => 0,
+            PiranhaField::Squid => 0,
+            PiranhaField::Fish { team: _, size } => size.to_num(),
+        }
+    }
+}
+
+impl std::cmp::PartialOrd for PiranhaField {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl std::cmp::Ord for PiranhaField {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        let own_size = self.to_size_num();
+        let other_size = other.to_size_num();
+        own_size.cmp(&other_size)
+    }
+}
+
 impl fmt::Display for PiranhaField {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
