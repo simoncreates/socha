@@ -211,9 +211,8 @@ impl ComHandler {
         match self.reader.read(&mut tmp) {
             Ok(n) => {
                 if n == 0 {
-                    return Err(ReceiveErr::ConnectionClosed(
-                        ConnectionClosedErr::ServerClosed,
-                    ));
+                    // todo better handling
+                    return Ok(());
                 }
                 let chunk = String::from_utf8_lossy(&tmp[..n]);
                 self.buf.push_str(&chunk);
