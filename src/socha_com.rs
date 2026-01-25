@@ -290,7 +290,6 @@ impl ComHandler {
         if let Some(room) = &self.room_id {
             let xml = make_move_xml(room, x.into(), y.into(), dir)
                 .map_err(|_| SendErr::FailedToBuildXml)?;
-
             self.stream.write_all(xml.as_bytes())?;
             self.stream.flush()?;
             Ok(())

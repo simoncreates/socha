@@ -78,6 +78,10 @@ pub fn make_join_prepared_xml(reservation_code: &str) -> Result<String, Box<dyn 
     Ok(join_prepared.to_string()?)
 }
 
+pub fn make_close_xml() -> String {
+    "<close></close>".to_string()
+}
+
 pub fn make_move_xml(
     room_id: &str,
     x: u32,
